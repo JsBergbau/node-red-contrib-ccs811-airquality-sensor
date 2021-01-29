@@ -82,6 +82,12 @@ module.exports = function (RED) {
 
 			//Check if sensor is in desired mode
 			let mode = i2cBus.readByteSync(CCS811Address, ccs811MeasurementModeRegister);
+			if (config.DisableAutomaticBaselineCalibration) {
+				//node.warn("automatic calibration disabled");
+				desiredMeasurementMode = desiredMeasurementMode | 0b00000010;
+				// console.log("meamode:", desiredMeasurementMode.toString(2))
+				// console.log("test",0b01010101.toString(2))
+			}
 			if (mode != desiredMeasurementMode) {
 				node.warn("CCS811 was not in desired measurement mode. \nIf you see this message right after startup everything is fine. \nIf you see this messsage during runtime without knowingly changing the mode or resetting, please check wiring or other applications accessing this sensor.")
 				i2cBus.writeByteSync(CCS811Address, ccs811MeasurementModeRegister, desiredMeasurementMode)
@@ -96,7 +102,6 @@ module.exports = function (RED) {
 			// If this node is installed in Node-RED 0.x, it will need to
 			// fallback to using `node.send`
 			send = send || function () { node.send.apply(node, arguments) }
-
 			switch (msg.payload) {
 
 				case "getMeasurement":
@@ -106,9 +111,9 @@ module.exports = function (RED) {
 					let eCO2 = envReading[0] * 256 + envReading[1];
 					let TVOC = envReading[2] * 256 + envReading[3];
 					let statusRegister = envReading[4];
-					let statusRegisterString = statusRegister.toString(2).padStart(8,'0');
+					let statusRegisterString = statusRegister.toString(2).padStart(8, '0');
 					let errorRegister = envReading[5];
-					let errorRegisterString = errorRegister.toString(2).padStart(8,'0');
+					let errorRegisterString = errorRegister.toString(2).padStart(8, '0');
 
 					let rawCurrent_uA = envReading[6] >> 2;
 					let rawADC = (envReading[6] & 0b00000011) * 256 + envReading[7];
@@ -166,9 +171,9 @@ module.exports = function (RED) {
 							envTemperature = 20;
 						}
 						envTemperature += 25;
-						envTemperature =  Math.round(envTemperature * 2);
+						envTemperature = Math.round(envTemperature * 2);
 						envHumidity = Math.round(envHumidity * 2);
-						envRegisterData = Buffer.from([envHumidity,0,envTemperature,0]);
+						envRegisterData = Buffer.from([envHumidity, 0, envTemperature, 0]);
 						i2cBus.writeI2cBlockSync(CCS811Address, ccs811EnvironmentDataRegister, 4, envRegisterData);
 						msg.payload = {};
 						msg.payload.confirmationMessage = "Environment calibration sucessfully written to: " + envRegisterData.toString("hex") + " (hex)";
@@ -182,7 +187,7 @@ module.exports = function (RED) {
 					read = i2cBus.readByteSync(CCS811Address, ccs811ErrorRegister);
 					msg.payload = {};
 					msg.payload.errorRegister = read;
-					msg.payload.errorRegisterString = read.toString(2).padStart(8,'0');
+					msg.payload.errorRegisterString = read.toString(2).padStart(8, '0');
 					send(msg);
 					break;
 				case "getFWVersions":
@@ -192,24 +197,24 @@ module.exports = function (RED) {
 					let fwBootloaderVersionMinor = fwBootloaderVersion[0] & 0b00001111;
 					let fwBootloaderVersionTrivial = fwBootloaderVersion[1];
 					fwBootloaderVersion = fwBootloaderVersionMajor.toString(10) + "." + fwBootloaderVersionMinor.toString(10) + "." + fwBootloaderVersionTrivial;
-					
-					
+
+
 					let fwAppVersion = Buffer.alloc(2);
 					i2cBus.readI2cBlockSync(CCS811Address, ccs811FWAppVersionRegister, 2, fwAppVersion);
 					let fwAppVersionMajor = fwAppVersion[0] >> 4;
 					let fwAppVersionMinor = fwAppVersion[0] & 0b00001111;
 					let fwAppVersionTrivial = fwAppVersion[1];
 					fwAppVersion = fwAppVersionMajor.toString(10) + "." + fwAppVersionMinor.toString(10) + "." + fwAppVersionTrivial;
-					
+
 					msg.payload = {};
-					msg.payload. BootloaderVersion = fwBootloaderVersion;
+					msg.payload.BootloaderVersion = fwBootloaderVersion;
 					msg.payload.AppVersion = fwAppVersion;
 					send(msg);
-					
+
 					break;
 
 				case "reset":
-					resetCode = Buffer.from([0x11,0xE5,0x72,0x8A])
+					resetCode = Buffer.from([0x11, 0xE5, 0x72, 0x8A])
 					i2cBus.writeI2cBlockSync(CCS811Address, ccs811ResetRegister, 4, resetCode);
 					msg.payload = {};
 					msg.payload.confirmationMessage = "Sensor successfully reset";

@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-ccs811-airquality-sensor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "With this node you can read and manage the AMS CCS811 air quality sensor",
   "main": "ccs811.js",
   "scripts": {

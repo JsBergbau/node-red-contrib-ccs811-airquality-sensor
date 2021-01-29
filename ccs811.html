@@ -6,7 +6,8 @@
 			name: { value: "CCS811 airquality sensor" },
 			i2cBus: { value: "1", validate: RED.validators.regex(/^[0-9]{1,2}/) },
 			CCS811Address: { value: "0x5A" },
-			CCS811Mode: { value: "mode2" }
+			CCS811Mode: { value: "mode3" },
+			DisableAutomaticBaselineCalibration : { value: false }
 		},
 		inputs: 1,
 		outputs: 1,
@@ -42,6 +43,12 @@
         <option value="mode3">Pulse heating: measurement every 60s</option>
         <option value="mode4">Constant Power: measurement every 250ms !see documentation!</option>
         </select>
+	</div>
+	<div class="form-row">
+		<label><i class="fa fa-pencil"></i></label>		
+		<input type="checkbox" id="node-input-DisableAutomaticBaselineCalibration"  style="display:inline-block; width:15px; vertical-align:super;" autocomplete="off">
+		<label style="width: 65%" for="node-input-DisableAutomaticBaselineCalibration">Disable automatic baseline calibration (works only in FW version 1.x)</label> 
+		       
     </div>
 </script>
 
@@ -61,6 +68,13 @@
 		<p> When changing mode from higher to lower sample rate sensor should be in idle / off mode for at least 10 minutes. Using a mode with a higher sample rate doesn't require wait time.</p>
 		<p> The baseline calibration value should be saved for every mode seperately.</p>
 		<p> My recommendation is taking a measurement every 10s or every 60s. This saves energy but gives a reasonable time resolution in measurement.</p>
+		<p>Checkbox <code>Disable automatic baseline calibration</code> disables automatic baseline calibration. Even when TVOC goes too high baseline is not adjusted. Values are now just clipped. 
+			This setting works only with FW Version 1.x, not in 2.x</p>
+		<p> For firmware version 1.x you can change the interval of automatic baseline calibration. Default is 24 hours, but it can be adjusted between every hour and every 1023 hours which are almost 
+			43 days. If somebody needs this feature, please open an issue and I'll implement. </p> 
+		<p> Firmware version 1.1.0 had a maximum range of 8194 ppm eCO2 and 1187 ppb TVOC. Both values correlated somehow. With firmware version 2.0.1 both values go to 64000 ppb for TVOC and 64000 for eCO2
+		according to datasheet. However in my tests with a permanent marker TVOC was maximum at 29206 ppb whereas eCO2 bounced between 16752 ppm and 27613 ppm. </p>
+
     <h3>Inputs</h3>
     <dl class="message-properties">
         <dt>payload<span class="property-type">string</span></dt>		
@@ -106,21 +120,29 @@
 	<h3>Additional information</h3>
 	<p>Some notes on baseline calibration. As stated in the datasheet there is an automatic baseline correction / calibration with standard interval of 24 hours. This means sensor
 		considers the lowest measured TVOC value within 24 hours as 0 TVOC / 400 ppm eCO2. You regularly won't reach thus good air quality. See below.</p>
-		<p>This interval is stated to be programmable, but 
-		no information could be found how to change this interval. So as workaround I recommend setting the baseline in regular intervals like every hour. If you want to have a defined time, reset the sensor every 24 hours
-		and set the baseline again after initializing / first taken measurement. Since the sensor has already warmed up, there should be no wait time. And remember to calibrate it with really fresh air from time to time.</p>
-		<p>Baseline is also calibrated on powerup 
+		<p>This interval can only be programmed or completely disabled on firmware version 1.x. Completely disabling it can be checked in Node properties. 
+		If you need adjusting the interval between every hour and every 1023 hours in one hour steps, please open an issue and I'll implement. 
+		After you've calibrated with fresh air and noted your baseline I recommend you disabling automatic baseline calibration for indoor usage. 
+		Since sensor drifts over time you should regularly re-calibrate it.</p>
+		<p> So as workaround for firmware version 2.x I recommend resetting the sensor every 23 hours so reset is before automatic baseline calibration can take place.
+			Set the baseline again after initializing / first taken measurement. Since the sensor has already warmed up, there should be no wait time. 
+		If you want to have a defined time, reset the sensor every 24 hours. However I doubt internal clock is very accurate so it may happen that automatic baseline calibration took already place.		
+		Please remember to calibrate it with really fresh air from time to time.</p>
+		<p>Baseline is also automatically calibrated on powerup 
 		by setting it to 0 TVOC / 400 ppm eCO2. So if you power up in bad air quality then you get completely wrong readings. Thats why you should calibrate it with fresh air. If you take it outside, please 
-		also calibrate environment data temperature and humidity. Then store the calibration baseline and re-set it after powering it up inside. As measurements with a CO2 sensor showed it can take
-		hours until there is really a CO2 level of 400 ppm. In winter you'll lose a lot of energy. And temperature and humidity drop a lot, so there is also calibration required for these values.</p>
+		also calibrate environment data temperature and humidity. Then store the calibration baseline and re-set it after powering it up indoor. </p>
+		<p>As measurements with a CO2 sensor showed it can take
+		hours until there is really a CO2 level of 400 ppm. In winter you'll lose a lot of energy. And temperature and humidity drop a lot, so it is recommended to calibrate manually.</p>
 		<p>
-		There is also an automatic baseline correction when the sensor reaches its maximum dynamic range. If it gets to its maxmium of TVOC of 1187 / 8192 ppm eCO2 (Version 2 of the sensor seems to have a higher range) baseline is adjusted that sensor gets
-		below these maximum values. There is no clipping! This means without having the same calibration baseline you can't compare these values. </p>
+		There is also an automatic baseline correction when the sensor reaches its maximum dynamic range unless automatic baseline calibration is disabled which is only
+		possible on firmware version 1.x. If sensor gets to its maxmium of TVOC of 1187 ppb / 8192 ppm eCO2 (Firmware Version 1.1.0) resp. 64000 ppb TVOC and 64000 ppm eCO2 (but see notes above)
+		baseline is adjusted when readings go
+		above these maximum values. There is no clipping unless automatic baseline calibration is disabled! This means without having the same calibration baseline you can't compare these values. </p>
 		<p>Especially when testing the sensor by holding an open permanent marker
 		near the sensor baseline gets shifted within seconds. 
 		To get a comparable value you could use sensor resistance as more reliable value regarding TVOC concentration when exceeding dynamic range. The more TVOC in the air the lower the resistance.
-		However this value changes over time, see also baseline calibration. 
-		And TVOC and eCO2 values depend not only on sensor resistance (which changes a lot with temperature) but also on humidity and of course temperature. According to datasheet sensor resistance is devided 
+		However this value changes over time, see also baseline calibration. Resistance also changes with temperature. So comparing restistance should only be done when you relly have a constant temperature.</p>
+		<p>And TVOC and eCO2 values depend not only on sensor resistance (which changes a lot with temperature) but also on humidity and of course temperature. According to datasheet sensor resistance is devided 
 		by the baseline. However in my tests values from baseline register didn't have a linear relationship between sensor resistance and TVOC value read from CCS811. So it is not possible 
 		to get from raw data to TVOC and eCO2. This algorithm is secret intellectual property, see also the notes for sensor mode 4. </p>
 		<p>In most cases dynamic range should be sufficient unless there is a massive amount of TVOC like from a permanent marker or certain household cleaners or benzine. </p>
