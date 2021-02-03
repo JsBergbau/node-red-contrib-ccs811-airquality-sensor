@@ -110,7 +110,7 @@
 	it should be saved every 24 - 48 hours, afterwards every 5 - 7 days. </p>
 	<p><code>setCalibrationBaseline</code> in <code>msg.payload</code> together with <code>msg.CalibrationBaseline</code> sets the calibration baseline. According to datasheet this should be done after sensor is already running 
 		20 - 30 minutes in desired mode. In my tests it could be already done a few seconds after setting desired mode. However it still takes about 20 minutes until readings are quite accurate. You should check if calibration 
-	 baseline is really the one you set. If not it either takes still some time until sensor has heated up completely or air quality differs too much compared to the air quality when saving baseline. </p>
+	 baseline is really the one you set. If not it either takes still some time until sensor has heated up completely or air quality differs too much compared to the air quality when saving baseline. Specify Buffer in format like ["0x1f","0xcc"].</p>
 	<p><code>getFWVersions</code> Returns the Bootloader firmware version and App firmware version of your CCS811 sensor. In January 2021 version 2.0.1 is the latest firmware. See link in the references section on how to update.</p>
 	<p><code>setEnvironmentCalibration</code> Send together with <code>msg.Humidity</code> (relative humidity as number, so 40% gets 40) and <code>msg.Temperature</code> in °C to compensate environment changes. In my tests temperature 
 	changed resistance of sensor most. Humidity neglible, but for TVOC and eCO2 calculation mechanism humidty is very important. </p>

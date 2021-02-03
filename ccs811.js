@@ -130,6 +130,7 @@ module.exports = function (RED) {
 					msg.payload.rawVoltage_mV = Math.round(rawVoltage_mV * 100) / 100;
 					let resistance = 1.65 * rawADC / (rawCurrent_uA / 1000000 * 1023); //or let MyResistance = (rawVoltage_mV / 1000) / (rawCurrent_uA / 1000000);
 					msg.payload.sensorResistanceOhm = Math.round(resistance);
+					node.status({fill:"green",shape:"dot",text: "TVOC: " + TVOC + " ppb, eCO2: " + eCO2 + " ppm"});
 					send(msg);
 					break;
 
@@ -222,7 +223,9 @@ module.exports = function (RED) {
 					break;
 
 				default:
+					node.status({fill:"red",shape:"ring",text: "Invalid input"});
 					done("Invalid input. Please see Node's help");
+
 			}
 
 			if (done) {
